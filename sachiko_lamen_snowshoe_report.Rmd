@@ -1,0 +1,162 @@
+---
+title: "Snowshoe Report"
+author: "Sachiko Lamen"
+date: "11/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(broom)
+library(equatiomatic)
+library(lubridate)
+library(kableExtra)
+library(effsize)
+```
+# Add introduction A 4 - 5 sentence "mini-introduction" to what this study is exploring, including basic background information about the subject, site and study (with citations as needed), and a brief overview of what is included in the exploratory report. You should probably do this last so you know what’s contained in the report.
+
+# Include data analysis A 3 - 4 sentence section in which you briefly describe the data, including citation & credit as needed, and provide an overview of the main analysis, statistical methods and tools used.
+
+This report visualizes and wrangles data for juvenile Snowshoe Hares recorded from 1998 - 2012. Data was gathered from Bonanza Creek LTER as part of the US Long Term Ecological Research Network.
+
+**Citation:** Kielland, K., F.S. Chapin, R.W. Ruess, and Bonanza Creek LTER. 2017. Snowshoe hare physical data in Bonanza Creek Experimental Forest: 1999-Present ver 22. Environmental Data Initiative. https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14
+
+```{r}
+bonanza <- read_csv(here("data", "bonanza_hares.csv"))
+```
+
+## Juvenile Hare Investigation
+Create new data set that counts total number of juvenile hare trappings per year, then plot using `geom_line()` to visualize fluctuations in juvenile hare trappings per year from 1998 - 2012. 
+```{r}
+bonanza_year <- bonanza %>% # create new data set 
+  mutate(date_new = mdy(date)) %>% 
+  mutate(year = year(date_new)) %>% # with date converted to class "Date"
+  filter(age == "j") %>% # only pull results where age = j (juvenile)
+  select(year) %>% # select column `year`
+  count(year) # counting total number of trappings per year
+
+```
+
+```{r}
+ggplot(data = bonanza_year, aes(x = year)) +
+  geom_line(aes(x = year, y = n)) +
+  labs (x = "Year",
+        y = "Number of Trappings",
+        title = "Number of juvenile hares trapped per year (1998 - 2012)")
+```
+### Describe major takeaways from the graph and total snowshoe hare trappings at the sight (include information from summary table below (hide summary table)
+
+```{r}
+stats_bonanza <- bonanza_year %>%
+  group_by(year) %>%
+  summarize(total_trappings = sum(n))
+
+stats_bonanza %>%
+  summarize(mean = mean(total_trappings),
+            median = median(total_trappings),
+            std_deviation = sd(total_trappings),
+            maximum = max(total_trappings),
+            minimum = min(total_trappings))
+```
+## Visualize juvenile hare weights
+
+```{r}
+juveniles <- bonanza %>%
+  filter(age %in% "j") %>%
+           select(weight, sex, age, grid) %>%
+  mutate(sex = case_when(sex == "m" ~ "Male",
+                          sex == "f" ~ "Female"),
+         grid = case_when(grid == "bonrip" ~ "Bonanza Riparian",
+                          grid == "bonmat" ~ "Bonanza Mature",
+                          grid == "bonbs" ~ "Lowland Black Spruce"))
+
+
+ggplot(data = juveniles, aes(x = sex, y = weight)) +
+  geom_jitter(aes(color = sex), width = 0.5, size = 0.6) +
+  facet_wrap(~ grid) +
+  labs(title = "Juvenile Hare Weight Distribution Across Sites",
+       y = "Weight (g)") +
+  theme(axis.title.x = element_blank())
+```
+
+
+## Juvenile weight comparison (male & female snowshoe hares)
+Finalized table containing th emean, std dev, and sample size w/ table caption placed ABOVE the table 
+```{r}
+
+juveniles_stats <- juveniles %>%
+  group_by(sex) %>%
+  summarize(trappings = n(),
+            mean = mean(trappings),
+            median = median(trappings),
+            std_deviation = sd(trappings),
+            maximum = max(trappings),
+            minimum = min(trappings))
+
+juveniles_stats %>%
+  kable(col.names = c("Sex",
+                      "Sample Size",
+                      "Mean Size (g)",
+                      "Median Size (g)",
+                      "Standard Deviation",
+                      "Maximum Size (g)",
+                      "Minimum Size (g)"),
+        caption = "**Table 1. Male v. Female Statistics for Purple Urchins (Naples Reef, 2010).** Data was collected from Naples Reef (NAPL) for two treatments: CONTROL (n = 112) treatments left giant kelp intact, ANNUAL (n = 135) treatments removed giant kelp each winter. Urchin size was measured using diameter (cm)") %>%
+  kable_styling(full_width = FALSE)
+
+```
+
+2-3 sentence comprehensive statement of the means comparison including: actual difference, effect size (cohen's d), and outcome of an unpaired two sample t test
+
+```{r}
+ggplot(data = juveniles, aes(x = weight)) +
+  geom_histogram(bins = 15) +
+  facet_wrap(~ sex)
+
+ggplot(data = juveniles, aes(sample = weight)) +
+  geom_qq() +
+  facet_wrap(~sex)
+```
+
+
+```{r}
+juvenile_females <- juveniles %>% 
+  filter(sex == "Female") %>% 
+  pull(weight)
+
+juvenile_males <- juveniles %>%
+  filter(sex == "Male") %>%
+  pull(weight)
+
+juvenile_t <- t.test(juvenile_females, juvenile_males, na.rm = TRUE)
+
+juvenile_t
+
+juvenile_cohen<- cohen.d(juvenile_females, juvenile_males, na.rm = TRUE)
+
+juvenile_cohen
+```
+
+
+
+
+
+
+
+Sara Guitinan Bureau of Ocean Energy Management (BOEM): Fish species distributions are changing -- BOEM -- Morro Bay offshore wind planning area -- fishing industry needs to adapt to change in species distribution -- docks, onshore processing places-- what are the needs of the fishing industry -- support for filling the needs would be mitigation of the negative impacts of an offshore wind project
+What would a osw project look like if it was centered around EJ
+Something on green hydrogen? -- offshore winds could potentially be used to produce hydrogen -- electrolysis. Unknowns?
+
+Near Diablo Canyon Nuclear site that will be decomissioned soon. Conflict of negotiations between DOD and someone else. Also important to inigenous people in the area. 
+
+Involved in 4 GP
+2019 - lifecycle assessment of greenhouse gas emmisions from floating offshore winds in CA
+ - report is helping to inform offshore renewable energy
+Marine mammal monitoring
+Citizen science for LT rocky intertidal monitoring
+Ocean Acidification -- monitoring gaps and hotspots
+
+West Coast Ocean Alliance
