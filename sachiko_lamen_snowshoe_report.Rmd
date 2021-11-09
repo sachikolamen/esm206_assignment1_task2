@@ -111,7 +111,7 @@ juveniles_stats %>%
 
 2-3 sentence comprehensive statement of the means comparison including: actual difference, effect size (cohen's d), and outcome of an unpaired two sample t test
 
-```{r}
+```{r, include = FALSE}
 ggplot(data = juveniles, aes(x = weight)) +
   geom_histogram(bins = 15) +
   facet_wrap(~ sex)
@@ -139,6 +139,29 @@ juvenile_cohen<- cohen.d(juvenile_females, juvenile_males, na.rm = TRUE)
 
 juvenile_cohen
 ```
+
+## Relationship between juvenile weight and hind foot length
+
+```{r}
+foot_weight <- bonanza %>%
+  filter(age == "j") %>%
+  select(age, hindft, weight)
+
+ggplot(data = foot_weight, aes(x = weight, y = hindft)) +
+  geom_point() +
+  labs(title = "Hind Foot Length and Weight Comparison",
+       x = "Weight (g)",
+       y = "Hind Foot (mm)")
+```
+## FIGURE CAPTION
+
+## Simple Linear Regression
+```{r}
+foot_weight_lm <- lm(hindft~ weight, data = foot_weight)
+
+summary(foot_weight_lm)
+```
+
 
 
 
