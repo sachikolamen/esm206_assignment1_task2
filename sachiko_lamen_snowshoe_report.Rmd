@@ -2,25 +2,30 @@
 title: "Snowshoe Report"
 author: "Sachiko Lamen"
 date: "11/4/2021"
-output: html_document
+output: 
+  html_document: 
+    theme: cerulean
+    highlight: pygments
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(here)
 library(janitor)
-library(broom)
 library(equatiomatic)
 library(lubridate)
 library(kableExtra)
 library(effsize)
+library(plotly)
+library(broom)
 ```
-# Add introduction A 4 - 5 sentence "mini-introduction" to what this study is exploring, including basic background information about the subject, site and study (with citations as needed), and a brief overview of what is included in the exploratory report. You should probably do this last so you know what’s contained in the report.
+## **Introduction:** Add introduction A 4 - 5 sentence "mini-introduction" to what this study is exploring, including basic background information about the subject, site and study (with citations as needed), and a brief overview of what is included in the exploratory report. You should probably do this last so you know what’s contained in the report.
 
-# Include data analysis A 3 - 4 sentence section in which you briefly describe the data, including citation & credit as needed, and provide an overview of the main analysis, statistical methods and tools used.
+## **Data and Analysis** Include data analysis A 3 - 4 sentence section in which you briefly describe the data, including citation & credit as needed, and provide an overview of the main analysis, statistical methods and tools used.
 
-This report visualizes and wrangles data for juvenile Snowshoe Hares recorded from 1998 - 2012. Data was gathered from Bonanza Creek LTER as part of the US Long Term Ecological Research Network.
+This report visualizes and wrangles data for juvenile Snowshoe Hares recorded from 1999 - 2012. Data was gathered from Bonanza Creek LTER as part of the US Long Term Ecological Research Network.
 
 **Citation:** Kielland, K., F.S. Chapin, R.W. Ruess, and Bonanza Creek LTER. 2017. Snowshoe hare physical data in Bonanza Creek Experimental Forest: 1999-Present ver 22. Environmental Data Initiative. https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14
 
@@ -28,28 +33,33 @@ This report visualizes and wrangles data for juvenile Snowshoe Hares recorded fr
 bonanza <- read_csv(here("data", "bonanza_hares.csv"))
 ```
 
-## Juvenile Hare Investigation
+### Juvenile Hare Investigation
 Create new data set that counts total number of juvenile hare trappings per year, then plot using `geom_line()` to visualize fluctuations in juvenile hare trappings per year from 1998 - 2012. 
 ```{r}
 bonanza_year <- bonanza %>% # create new data set 
   mutate(date_new = mdy(date)) %>% 
   mutate(year = year(date_new)) %>% # with date converted to class "Date"
-  filter(age == "j") %>% # only pull results where age = j (juvenile)
+  filter(age == "j") %>% # only pull results where age = "j" (juvenile)
   select(year) %>% # select column `year`
   count(year) # counting total number of trappings per year
 
 ```
 
 ```{r}
-ggplot(data = bonanza_year, aes(x = year)) +
+bonanza_year_interactive <- ggplot(data = bonanza_year, aes(x = year)) +
   geom_line(aes(x = year, y = n)) +
   labs (x = "Year",
         y = "Number of Trappings",
-        title = "Number of juvenile hares trapped per year (1998 - 2012)")
-```
-### Describe major takeaways from the graph and total snowshoe hare trappings at the sight (include information from summary table below (hide summary table)
+        title = "Juvenile Hares Trapped Per Year (1999 - 2012)") +
+  theme(panel.border = element_blank(),
+          panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "lightblue"))
 
-```{r}
+ggplotly(bonanza_year_interactive)
+```
+**Figure 1. Total juvenile snowshoe hares trapped in Bonanza Creek LTER (1998 - 2012)** Trapping data was compiled from three sample sites of varying environment. Line shows the total number of juvenile hares trapped each year.
+
+```{r, include = FALSE}
 stats_bonanza <- bonanza_year %>%
   group_by(year) %>%
   summarize(total_trappings = sum(n))
@@ -59,8 +69,14 @@ stats_bonanza %>%
             median = median(total_trappings),
             std_deviation = sd(total_trappings),
             maximum = max(total_trappings),
-            minimum = min(total_trappings))
+            minimum = min(total_trappings),
+            sample_size = n())
+
 ```
+
+Across all three sites, there is a visible decline in number of juvenile hares trapped between 1998 and 2012. Maximum number of hares trapped in a single year was `r max(stats_bonanza$total_trappings)`. Minimum number of hares trapped in a single year was `r min(stats_bonanza$total_trappings)`. Between 1998 and 2012 the mean and median number of juvenile hares trapped was `r mean(stats_bonanza$total_trappings)`, and `r median(stats_bonanza$total_trappings)`, respectively. To account for the fact that these counts are impacted by effort (e.g. number of days and traps in the study each year) you could standardize the population for future analyses by...???
+
+
 ## Visualize juvenile hare weights
 
 ```{r}
@@ -81,20 +97,32 @@ ggplot(data = juveniles, aes(x = sex, y = weight)) +
        y = "Weight (g)") +
   theme(axis.title.x = element_blank())
 ```
+**Figure 2. Juvenile snowshoe hare weight distribution at three sites (1999 - 2012)** Each dot represents an individually observed hare, colors delineate sex (red = female, blue = male, grey = NA).
 
+```{r}
+ggplot(data = juveniles, aes(x = weight)) +
+  geom_histogram(aes(fill = sex),
+                color = "black",
+                 bins = 30) +
+  facet_grid(sex ~ grid)
+```
+**Figure 3. Juvenile snowshoe hare weight distribution faceted by sex and grid location** Bars represent number of hares trapped at generalized weight (bins = 30). Colors represent hare sex (red = female, blue = male, grey = NA).
+
+Figure 1 and Figure 2 show the highest density of female and male juvenile snowshoe hares are found in the Bonanza Riparian site. The histograms in Figure 2 indicate that the data may not be normally distributed for any of the female or male populations sampled at any of the three sites. In particular, the distribution of male hares in the Bonanza Riparian site could be bimodal. 
 
 ## Juvenile weight comparison (male & female snowshoe hares)
-Finalized table containing th emean, std dev, and sample size w/ table caption placed ABOVE the table 
+Finalized table containing the mean, median, standard deviation, and sample size w/ table caption placed ABOVE the table 
+
 ```{r}
 
 juveniles_stats <- juveniles %>%
   group_by(sex) %>%
-  summarize(trappings = n(),
-            mean = mean(trappings),
-            median = median(trappings),
-            std_deviation = sd(trappings),
-            maximum = max(trappings),
-            minimum = min(trappings))
+  summarize(sample_size= n(),
+            mean = round(mean(weight, na.rm = TRUE),2),
+            median = round(median(weight, na.rm = TRUE),2),
+            std_deviation = round(sd(weight, na.rm = TRUE),2),
+            maximum = max(weight, na.rm = TRUE),
+            minimum = min(weight, na.rm = TRUE))
 
 juveniles_stats %>%
   kable(col.names = c("Sex",
@@ -104,14 +132,11 @@ juveniles_stats %>%
                       "Standard Deviation",
                       "Maximum Size (g)",
                       "Minimum Size (g)"),
-        caption = "**Table 1. Male v. Female Statistics for Purple Urchins (Naples Reef, 2010).** Data was collected from Naples Reef (NAPL) for two treatments: CONTROL (n = 112) treatments left giant kelp intact, ANNUAL (n = 135) treatments removed giant kelp each winter. Urchin size was measured using diameter (cm)") %>%
+        caption = " **Table 1. Male v. female statistics juvenile snowshoe hares (Bonanza Creek LTER.** Data was collected across three sites: Bonanza Riparian, Bonanza Mature, and Lowland Black Spruce. ") %>%
   kable_styling(full_width = FALSE)
 
 ```
-
-2-3 sentence comprehensive statement of the means comparison including: actual difference, effect size (cohen's d), and outcome of an unpaired two sample t test
-
-```{r, include = FALSE}
+```{r}
 ggplot(data = juveniles, aes(x = weight)) +
   geom_histogram(bins = 15) +
   facet_wrap(~ sex)
@@ -120,7 +145,6 @@ ggplot(data = juveniles, aes(sample = weight)) +
   geom_qq() +
   facet_wrap(~sex)
 ```
-
 
 ```{r}
 juvenile_females <- juveniles %>% 
@@ -139,6 +163,12 @@ juvenile_cohen<- cohen.d(juvenile_females, juvenile_males, na.rm = TRUE)
 
 juvenile_cohen
 ```
+
+Actual difference between average female and male weight: `r juveniles_stats$mean[1] - juveniles_stats$mean[2]`. Cohen's d effect size: `r juvenile_cohen$magnitude`. Estimated difference in means (t-test) `r round(juvenile_t$estimate, 3)`. t(df) = `r round(juvenile_t$statistic, 3)`, p = `r round(juvenile_t$p.value, 3)`
+
+2-3 sentence comprehensive statement of the means comparison including: actual difference, effect size (cohen's d), and outcome of an unpaired two sample t test
+
+
 
 ## Relationship between juvenile weight and hind foot length
 
@@ -160,7 +190,15 @@ ggplot(data = foot_weight, aes(x = weight, y = hindft)) +
 foot_weight_lm <- lm(hindft~ weight, data = foot_weight)
 
 summary(foot_weight_lm)
+
+foot_weight_lm_tidy <- broom::tidy(foot_weight_lm)
+
+foot_weight_lm_tidy
 ```
+"Simple linear regression was used to explore the relationship between snowshoe hare weight (g) and hind foot length (mm) including both male and female hares. A significant regression model was found ($\beta$ = `r foot_weight_lm$df.residual`)
+
+
+
 
 
 
